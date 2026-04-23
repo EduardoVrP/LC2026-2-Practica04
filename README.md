@@ -19,15 +19,10 @@ El primero es para compilar y el segundo es para ejecutar las pruebas unitarias.
 Si no les llegan a funcionar, es posible que el problema es que tengan una versión diferente de cabal y de ghc. Si ese es el caso, pueden ejecutar el comando `ghc-pkg list base` para reemplazar la versión base que viene en el archivo .cabal en las líneas 67 y 99.
 
 ## Integrantes
-
-En esta sección deben eliminar esta línea de texto, borrar la leyenda "Integrante n" y escribir su nombre empezando por apellidos y su número de cuenta.
-
-+ Integrante 1
-    - No. de Cuenta: 
-+ Integrante 2
-    - No. de Cuenta: 
-+ Integrante 3
-    - No. de Cuenta: 
++ Vazquez Merino Lenin Quetzal
+    - No. de Cuenta: 425106914 
++ Islas Garcia Fernando
+    - No. de Cuenta: 32229531 
 
 ## Nota
 Esta práctica cuenta con un ejercicio extra, si deciden realizarlo hagan las modificaciones habituales. Si no lo realizan, déjenlo tal cual como está en esta asignación.
