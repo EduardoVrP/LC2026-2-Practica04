@@ -130,19 +130,135 @@ quitaLiteral l (x:xs)
 
 --Ejercicio 6
 sep :: Literal -> Estado -> (Estado, Estado)
-sep = undefined
+sep (Var l) (interp, clausulas) = (((l, True):interp, clausulas),((l, False):interp, clausulas)) 
+sep (Not (Var l)) (interp, clausulas) = (((l, True):interp, clausulas),((l, False):interp, clausulas)) 
+
+--sep (Not (Var l)) (interp, clausulas) = (((l, False):interp, clausulas),((l, True):interp, clausulas)) 
 
 --IMPLEMENTACION PARTE 2
 
 
 --Ejercicio 1
 heuristicsLiteral :: [Clausula] -> Literal
-heuristicsLiteral = undefined
+heuristicsLiteral cs = 
+    let lits = concatenarList cs
+    in case lits of
+        [] -> error "La lista de cláusulas está vacía"
+        (x:xs) -> buscaMasFrecuente lits x 0
+
+-- Función que recorre la lista comparando los conteos
+buscaMasFrecuente :: [Literal] -> Literal -> Int -> Literal
+buscaMasFrecuente [] mejor _ = mejor
+buscaMasFrecuente (x:xs) mejor maxCount =
+    let actualCount = cuenta x (x:xs)
+    in if actualCount > maxCount
+       then buscaMasFrecuente xs x actualCount    
+       else buscaMasFrecuente xs mejor maxCount
+
+-- Cuenta cuántas veces aparece una literal
+cuenta :: Literal -> [Literal] -> Int
+cuenta _ [] = 0
+cuenta l (x:xs) 
+    | l == x    = 1 + cuenta l xs
+    | otherwise = cuenta l xs
+
+-- Concatena las listas de literales (Clausulas)
+concatenarList :: [Clausula] -> [Literal]
+concatenarList [] = []
+concatenarList (x:xs) = x ++ concatenarList xs
+
 
 --EJERCICIO 2
 dpll :: [Clausula] -> Interpretacion
-dpll = undefined
+dpll c = solveDPLL ([], c)
+
+-- Motor del algoritmo
+solveDPLL :: Estado -> Interpretacion
+solveDPLL estado@(interp, clausulas)
+    | success estado = interp
+    | conflict estado = []
+    | otherwise = 
+        let 
+            -- Aplicamos las reglas de la Parte 1
+            simplificado = red (elim (unit estado))
+        in 
+            if simplificado /= estado
+            then solveDPLL simplificado
+            else 
+                -- Splitting usando la heurística
+                let 
+                    l = heuristicsLiteral (miSnd simplificado)
+                    (e1, e2) = sep l simplificado
+                    res1 = solveDPLL e1
+                in 
+                    if nega (null res1) then res1 else solveDPLL e2
+
+-- Extrae el segundo componente de una tupla de dos elementos
+miSnd :: (a, b) -> b
+miSnd (x, y) = y
+
+nega :: Bool -> Bool
+nega True = False
+nega False = True
 
 --EXTRA
 dpll2 :: Prop -> Interpretacion
-dpll2 = undefined
+dpll2 p = dpll (propAClausulas p)
+
+-- Convierte la Prop (en FNC) a la estructura [Clausula]
+propAClausulas :: Prop -> [Clausula]
+propAClausulas p = case fnc p of
+    And a b -> propAClausulas a ++ propAClausulas b
+    Or a b  -> [clausulaALista (Or a b)]
+    Var s   -> [[Var s]]
+    Not v   -> [[Not v]]
+    Cons b  -> if b then [] else [[]]  -- La lista vacia es de exito, de otro casono lo es
+    where 
+        clausulaALista (Or a b) = clausulaALista a ++ clausulaALista b
+        clausulaALista x = [x]
+
+{-
+FORMAS NORMALES
+-}
+
+-- forma normal negativa
+fnn :: Prop -> Prop
+fnn (Cons True) = Cons True
+fnn (Cons False) = Cons False
+fnn (Var a) = Var a
+fnn (Not a) = negar (fnn a)
+fnn (Impl a b) = Or (fnn (Not a)) (fnn b)
+fnn (Syss a b) = And (fnn (Impl a b)) (fnn (Impl b a))
+fnn (Or a b) = Or (fnn a) (fnn b)
+fnn (And a b) = And (fnn a) (fnn b)
+
+-- Aplica la negación a una prop
+negar :: Prop -> Prop
+negar (Cons True) = Cons False
+negar (Cons False) = Cons True
+negar (Var a) = Not (Var a)
+negar (Not a) = a
+negar (Or a b) = And (negar a) (negar b)
+negar (And a b) = Or (negar a) (negar b)
+negar (Impl a b) = And a (negar b)
+negar (Syss a b) = negar (And (Impl a b) (Impl b a))
+
+-- Form normal conjuntiva
+fnc :: Prop -> Prop
+fnc prop = fncAux (fnn prop)
+
+-- Hace todo lo que haria fnc
+fncAux :: Prop -> Prop
+fncAux (Cons True) = Cons True
+fncAux (Cons False) = Cons False
+fncAux (Var a) = Var a
+fncAux (Not a) = Not a
+fncAux (And a b) = And (fncAux a) (fncAux b)
+fncAux (Or a b) = dist (fncAux a) (fncAux b)
+
+-- Distribuye propiamente los OR
+dist :: Prop -> Prop -> Prop
+dist (And a b) c = And (dist a c) (dist b c)
+dist a (And b c) = And (dist a b) (dist a c)
+dist a b = Or a b
+
